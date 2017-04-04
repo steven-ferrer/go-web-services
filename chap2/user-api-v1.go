@@ -54,7 +54,14 @@ func OptionsGet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 }
 
 func UsersGet(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+    log.Println("starting retrieval")
+    start := 0
+    limit := 10
+
+    next := start + limit
+
     w.Header().Set("Pragma", "no-cache")
+    w.Header().Set("Link", "<http://localhost:8080/api/users?start="+string(next)+"; rel=\"next\"")
 
     rows, _ := database.Query("SELECT * FROM users LIMIT 10")
 
