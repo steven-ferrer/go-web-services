@@ -2,11 +2,14 @@ package main
 
 import (
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
-	_ "strconv"
+	"strconv"
+	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/julienschmidt/httprouter"
@@ -30,7 +33,15 @@ type Users struct {
 
 //CreateResponse response if any error occurs
 type CreateResponse struct {
-	Error string `json:"error"`
+	Error     string `json:"error"`
+	ErrorCode string `json:"code"`
+}
+
+//ErrMsg error object
+type ErrMsg struct {
+	ErrCode    int
+	StatusCode int
+	Msg        string
 }
 
 func main() {
@@ -94,15 +105,29 @@ func UsersGet(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 func UsersCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	//freakin' Access-Control-Allow-Origin
 	//Still looking for a fix for this
-	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:9000")
-	r.Header.Set("Origin", "http://localhost:9000")
+	//w.Header().Set("Access-Control-Allow-Origin", "http://localhost:9000")
+	//r.Header.Set("Origin", "http://localhost:9000")
 	fmt.Println(r.Header.Get("Origin"))
 	NewUser := User{}
+	fmt.Println(r.FormFile("userImage"))
+	f, _, err := r.FormFile("userImage")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
 	NewUser.Username = r.FormValue("username")
 	NewUser.Email = r.FormValue("email")
 	NewUser.First = r.FormValue("first")
 	NewUser.Last = r.FormValue("last")
 
+	//returns a byte
+	fileData, _ := ioutil.ReadAll(f)
+	//encode to string
+	fileString := base64.StdEncoding.EncodeToString(fileData)
+
+	fmt.Println("****************************")
+	fmt.Println(fileString)
+	fmt.Println("****************************")
 	resp := CreateResponse{}
 	resp.Error = ""
 
@@ -111,13 +136,18 @@ func UsersCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	if err != nil {
 		resp.Error += "\n*" + err.Error()
 	}
-
 	sql := fmt.Sprintf("INSERT INTO users SET user_nickname='%s', "+
-		"user_first='%s', user_last='%s', user_email='%s'",
-		NewUser.Username, NewUser.First, NewUser.Last, NewUser.Email)
+		"user_first='%s', user_last='%s', user_email='%s', user_image='%s'",
+		NewUser.Username, NewUser.First, NewUser.Last, NewUser.Email, fileString)
 	q, err := database.Exec(sql)
 	if err != nil {
-		resp.Error += "\n*" + err.Error()
+		errorMessage, errorCode := dbErrorParse(err.Error())
+		fmt.Println(errorMessage)
+		errMsg := ErrorMessages(errorCode)
+		resp.Error = errMsg.Msg
+		resp.ErrorCode = string(errMsg.ErrCode)
+		fmt.Println(errMsg.StatusCode)
+		http.Error(w, "Conflict", errMsg.StatusCode)
 	}
 	fmt.Println(q)
 	createOutput, _ := json.Marshal(resp)
@@ -137,4 +167,33 @@ func UserUpdate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //UserDelete endpoint for deleting a specific user
 func UserDelete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
+}
+
+func dbErrorParse(err string) (string, int64) {
+	Parts := strings.Split(err, ":")
+	errorMessage := Parts[1]
+	Code := strings.Split(Parts[0], "Error ")
+	errorCode, _ := strconv.ParseInt(Code[1], 10, 32)
+	return errorMessage, errorCode
+}
+
+//ErrorMessages will return an ErrMsg object containing
+//all the details about an error
+func ErrorMessages(err int64) ErrMsg {
+	var em ErrMsg
+	errorMessage := ""
+	statusCode := 200
+	errorCode := 0
+	switch err {
+	case 1062:
+		errorMessage = "Duplicate Entry"
+		errorCode = 10
+		statusCode = 409
+	}
+
+	em.ErrCode = errorCode
+	em.StatusCode = statusCode
+	em.Msg = errorMessage
+
+	return em
 }
