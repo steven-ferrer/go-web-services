@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>WebSocket Example</title>
+    </head>
+    <body>
+        <div>
+            <h2>Your message</h2>
+            <textarea style="width:50%;height:300px;font-size;20px;" id="message"></textarea>
+
+            <div>
+                <input type="submit" value="Send" onclick="send();">
+                <input type="button" onclick="closeSocket();" value="Close">
+            </div>
+        </div>
+
+        <div id="messageArea"></div>
+        <script src="jquery.js"></script>
+        <script>
+            var socket;
+
+            function update(msg){
+                $('#messageArea').html(msg);
+            }
+
+            function connectWebSocket(){
+                var host = "ws://localhost:12345/length";
+
+                socket = new WebSocket(host);
+                socket.onopen = function(){
+                    update("Websocket connected...")
+                }
+
+                socket.onmessage = function(message){
+                    update('Websocket counted ' + message.data +
+                            'characters in your message.')
+                }
+
+                socket.onclose = function(){
+                    update('WebSocket closed');
+                }
+
+            }
+
+            function send(){
+                socket.send($('#message').val())
+            }
+
+            function closeSocket(){
+                socket.close();
+            }
+
+            connectWebSocket();
+        </script>
+    </body>
+</html>
