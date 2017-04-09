@@ -12,7 +12,8 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/julienschmidt/httprouter"
 
-	apispec "github.com/steven-ferrer/go-web-services/chap6/specification"
+	"github.com/steven-ferrer/go-web-services/chap5/password"
+	apispec "github.com/steven-ferrer/go-web-services/chap5/specification"
 )
 
 var database *sql.DB
@@ -24,6 +25,7 @@ type User struct {
 	Email    string `json:"email"`
 	First    string `json:"first"`
 	Last     string `json:"last"`
+	Password string `json:"password"`
 }
 
 //Users list of users
@@ -57,6 +59,7 @@ func main() {
 	database = db
 
 	routes := httprouter.New()
+	routes.ServeFiles("/src/*filepath", http.Dir("../"))
 	routes.GET("/api", OptionsGet)
 	routes.OPTIONS("/api/users", UsersInfo)
 	routes.GET("/api/users", UsersGet)     //get all users
@@ -98,7 +101,7 @@ func UsersGet(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		"; rel=\"next\"")
 
 	rows, _ := database.Query("SELECT user_id, user_nickname, user_first, user_last, " +
-		"user_email FROM users LIMIT 10")
+		"user_email FROM users ORDER BY user_id DESC LIMIT 10")
 
 	users := Users{}
 
@@ -122,7 +125,7 @@ func UsersCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	//Still looking for a fix for this
 	//w.Header().Set("Access-Control-Allow-Origin", "http://localhost:9000")
 	//r.Header.Set("Origin", "http://localhost:9000")
-	fmt.Println(r.Header.Get("Origin"))
+	//fmt.Println(r.Header.Get("Origin"))
 	NewUser := User{}
 	/*fmt.Println(r.FormFile("userImage"))
 	f, _, err := r.FormFile("userImage")
@@ -134,15 +137,16 @@ func UsersCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	NewUser.Email = r.FormValue("email")
 	NewUser.First = r.FormValue("first")
 	NewUser.Last = r.FormValue("last")
+	NewUser.Password = r.FormValue("password")
 
 	//returns a byte
 	//fileData, _ := ioutil.ReadAll(f)
 	//encode to string
 	//fileString := base64.StdEncoding.EncodeToString(fileData)
 
-	fmt.Println("****************************")
+	//fmt.Println("****************************")
 	//fmt.Println(fileString)
-	fmt.Println("****************************")
+	//fmt.Println("****************************")
 	resp := CreateResponse{}
 	resp.Error = ""
 
@@ -151,10 +155,15 @@ func UsersCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	if err != nil {
 		resp.Error += "\n*" + err.Error()
 	}
-	sql := fmt.Sprintf("INSERT INTO users SET user_nickname='%s', "+
-		"user_first='%s', user_last='%s', user_email='%s'",
-		NewUser.Username, NewUser.First, NewUser.Last, NewUser.Email)
-	q, err := database.Exec(sql)
+
+	pwdSalt, pwdhash := password.ReturnPassword(NewUser.Password)
+	fmt.Println(pwdSalt)
+	fmt.Println(pwdhash)
+
+	sql := "INSERT INTO users SET user_nickname=?, user_first=?, user_last=?, " +
+		"user_email=?, user_password=?, user_salt=?"
+	q, err := database.Exec(sql, NewUser.Username, NewUser.First, NewUser.Last,
+		NewUser.Email, pwdhash, pwdSalt)
 	if err != nil {
 		errorMessage, errorCode := dbErrorParse(err.Error())
 		fmt.Println(errorMessage)

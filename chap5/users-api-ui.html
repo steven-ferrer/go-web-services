@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Users API UI</title>
+        <link href="/src/bs/css/bootstrap.min.css" rel="stylesheet">
+    </head>
+    <body>
+        <div class="container">
+            <h1>Users API UI</h1>
+            <div class="alert alert-warning" id="api-messages" role="alert">
+            </div>
+
+            <ul class="nav nav-tabs" role="tablist">
+                <li class="active">
+                    <a href="#create" role="tab" data-toggle="tab">
+                        Create User
+                    </a>
+                </li>
+            </ul>
+
+            <!-- multipart form data when need to upload files -->
+            <div class="tab-content">
+                <div class="tab-pane active" id="create">
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" class="form-control" id="email"
+                            placeholder="Enter email">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" class="form-control" id="username"
+                            placeholder="Enter username">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="first">First name</label>
+                        <input type="text" class="form-control" id="first"
+                            placeholder="First name">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="last">Last name</label>
+                        <input type="text" class="form-control" id="last"
+                            placeholder="Last name">
+                    </div>
+
+                    <!--<div class="form-group">
+                        <label for="userImage">Picture</label>
+                        <input type="file" class="form-control" name="userImage"
+                            id="userImage" placeholder="Your picture here...">
+                    </div>-->
+
+                    <div class="form-group">
+                        <label for="userPassword">Password</label>
+                        <input type="password" class="form-control" name="password"
+                            id="password" placeholder="Your password here...">
+                    </div>
+
+                    <div class="form-group">
+                        <button id="btnCreate" onclick="createUser();" type="submit"
+                            class="btn btn-success">Create</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script src="/src/jq/jquery.js"></script>
+        <script src="/src/bs/js/bootstrap.min.js"></script>
+        <script>
+
+        function createUser(event){
+            action = "http://localhost:8080/api/users";
+            postData = {};
+            postData.email = $('#email').val();
+            postData.username = $('#username').val();
+            postData.first = $('#first').val();
+            postData.last = $('#last').val();
+            if(postData.email === "" || postData.username === "" ||
+                postData.first === "" || postData.last === ""){
+
+                $('.alert').html("Empty fields not allowed");
+                $('.alert').alert();
+                return;
+            }
+            $.post(action, postData, function(data){
+                if (data.error){
+                    $('.alert').html(data.error);
+                    $('.alert').alert();
+                } else {
+                    $('.alert').html('Save successful!')
+                    $('.alert').alert();
+                    setFieldsToEmpty();
+                }
+            }, 'json');
+        }
+
+        function setFieldsToEmpty(){
+            $("#email").val("");
+            $("#username").val("");
+            $("#first").val("");
+            $("#last").val("");
+            $("#password").val("");
+        }
+        </script>
+    </body>
+</html>
