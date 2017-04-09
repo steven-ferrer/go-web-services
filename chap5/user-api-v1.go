@@ -196,6 +196,8 @@ func UserUpdate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		errMsg := ErrorMessages(404)
 		log.Println(errMsg.ErrCode)
 		log.Println(w, errMsg.Msg, errMsg.StatusCode)
+		fmt.Fprintln(w, errMsg.Msg, " : ", errMsg.StatusCode)
+		return
 	} else if err != nil {
 		log.Println(err)
 		return
