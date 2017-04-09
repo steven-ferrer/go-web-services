@@ -59,6 +59,7 @@ func main() {
 
 	routes.GET("/api/users/:id", UserGet)    //get a specific user
 	routes.PUT("/api/users/:id", UserUpdate) //update a specific user
+	routes.DELETE("/api/users/:id", UserDelete)
 
 	routes.DELETE("/api/users/:id", UserDelete) //delete a user
 	log.Println("Starting server on :8080...")
