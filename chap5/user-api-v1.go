@@ -11,6 +11,8 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/julienschmidt/httprouter"
+
+	apispec "github.com/steven-ferrer/go-web-services/chap6/specification"
 )
 
 var database *sql.DB
@@ -35,6 +37,8 @@ type CreateResponse struct {
 	ErrorCode string `json:"code"`
 }
 
+type DocMethod interface{}
+
 //ErrMsg error object
 type ErrMsg struct {
 	ErrCode    int
@@ -54,6 +58,7 @@ func main() {
 
 	routes := httprouter.New()
 	routes.GET("/api", OptionsGet)
+	routes.OPTIONS("/api/users", UsersInfo)
 	routes.GET("/api/users", UsersGet)     //get all users
 	routes.POST("/api/users", UsersCreate) //create user
 
@@ -61,9 +66,18 @@ func main() {
 	routes.PUT("/api/users/:id", UserUpdate) //update a specific user
 	routes.DELETE("/api/users/:id", UserDelete)
 
-	routes.DELETE("/api/users/:id", UserDelete) //delete a user
 	log.Println("Starting server on :8080...")
 	log.Fatal(http.ListenAndServe(":8080", routes))
+}
+
+//UsersInfo options endpoint for users api
+func UsersInfo(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	w.Header().Set("Allow", "DELETE, GET,HEAD,OPTIONS,POST,PUT")
+	UserDocumentation := []DocMethod{}
+	UserDocumentation = append(UserDocumentation,
+		apispec.UserPOST, apispec.UserOPTIONS, apispec.UserGET)
+	output, _ := json.Marshal(UserDocumentation)
+	fmt.Fprintln(w, string(output))
 }
 
 //OptionsGet default endpoint, displays the available endpoints
