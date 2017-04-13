@@ -13,6 +13,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 
 	"github.com/steven-ferrer/go-web-services/chap5/password"
+	"github.com/steven-ferrer/go-web-services/chap5/pseudoauth"
 	apispec "github.com/steven-ferrer/go-web-services/chap5/specification"
 )
 
@@ -86,6 +87,39 @@ func UsersInfo(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 //OptionsGet default endpoint, displays the available endpoints
 func OptionsGet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	fmt.Fprintln(w, "Available Endpoing/s: \n * /api/users")
+}
+
+func CheckCredentials(w http.ResponseWriter, r *http.Request) {
+	var Credentials string
+	response := CreateResponse{}
+	consumerKey := r.FormValue("consumer_key")
+	fmt.Println("Consumer Key:", consumerKey)
+	timestamp := r.FormValue("timestamp")
+	signature := r.FormValue("signature")
+	nonce := r.FormValue("nonce")
+	err := database.QueryRow("SELECT consumer_secret FROM api_credentials WHERE consumer_key=?",
+		consumerKey).Scan(&Credentials)
+
+	if err != nil {
+		errMsg := ErrorMessages(404)
+		log.Println(errMsg.ErrCode)
+		log.Println(w, errMsg.Msg, errMsg.StatusCode)
+		response.Error = errMsg.Msg
+		response.ErrorCode = string(errMsg.StatusCode)
+		http.Error(w, errMsg.Msg, errMsg.StatusCode)
+		return
+	}
+
+	token, err := pseudoauth.ValidateSignature(consumerKey, Credentials,
+		timestamp, nonce, signature, 0)
+	if err != nil {
+		errMsg := ErrorMessages(401)
+		log.Println(errMsg.ErrCode)
+		log.Println(w, errMsg.Msg, errMsg.StatusCode)
+		response.Error = errMsg.Msg
+		response.ErrorCode = string(errMsg.StatusCode)
+		http.Error(w, errMsg.Msg, errMsg.StatusCode)
+	}
 }
 
 //UsersGet endpoint for getting all users
